@@ -1,0 +1,163 @@
+# MAAS Dashboard Pro — full stack (Docker)
+#
+# From repo root:
+#   docker compose up -d --build
+#   docker compose down
+#
+# Services:
+#   Frontend  http://localhost:3000
+#   API       http://localhost:4000/api/v1
+#   Zabbix UI http://localhost:8080  (Admin / zabbix)
+#   MAAS DB   localhost:5434
+
+networks:
+  maas_net:
+    driver: bridge
+
+volumes:
+  maas_pg_data:
+  zabbix_pg_data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: maas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: maas
+      POSTGRES_PASSWORD: maas
+      POSTGRES_DB: maas
+    ports:
+      - "5434:5432"
+    volumes:
+      - maas_pg_data:/var/lib/postgresql/data
+    networks: [maas_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maas -d maas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres_zabbix:
+    image: postgres:16-alpine
+    container_name: maas-zabbix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix
+      POSTGRES_DB: zabbix
+    volumes:
+      - zabbix_pg_data:/var/lib/postgresql/data
+    networks: [maas_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zabbix -d zabbix"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  zabbix_server:
+    image: zabbix/zabbix-server-pgsql:alpine-6.4-latest
+    container_name: maas-zabbix-server
+    restart: unless-stopped
+    environment:
+      DB_SERVER_HOST: postgres_zabbix
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix
+      ZBX_STARTPOLLERS: 5
+      ZBX_CACHESIZE: 32M
+    ports:
+      - "10051:10051"
+    networks: [maas_net]
+    depends_on:
+      postgres_zabbix:
+        condition: service_healthy
+
+  zabbix_web:
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-6.4-latest
+    container_name: maas-zabbix-web
+    restart: unless-stopped
+    environment:
+      DB_SERVER_HOST: postgres_zabbix
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix
+      ZBX_SERVER_HOST: zabbix_server
+      PHP_TZ: Africa/Tunis
+    ports:
+      - "8080:8080"
+    networks: [maas_net]
+    depends_on:
+      postgres_zabbix:
+        condition: service_healthy
+      zabbix_server:
+        condition: service_started
+
+  zabbix_agent:
+    image: zabbix/zabbix-agent2:alpine-6.4-latest
+    container_name: maas-zabbix-agent
+    restart: unless-stopped
+    environment:
+      ZBX_HOSTNAME: Zabbix server
+      ZBX_SERVER_HOST: zabbix_server
+      ZBX_SERVER_PORT: 10051
+      ZBX_PASSIVE_ALLOW: "true"
+      ZBX_ACTIVE_ALLOW: "true"
+    networks: [maas_net]
+    depends_on:
+      - zabbix_server
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: maas-backend
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: maas
+      DB_PASSWORD: maas
+      DB_NAME: maas
+      JWT_SECRET: maas-dev-secret-change-me
+      JWT_REFRESH_SECRET: maas-refresh-secret-change-me
+      JWT_ACCESS_EXPIRES: 8h
+      JWT_REFRESH_EXPIRES: 7d
+      WEBHOOK_SECRET: zabbix-webhook-secret
+      FRONTEND_URL: http://localhost:3000
+      REPORTS_DIR: reports
+      ZABBIX_MOCK: "false"
+      ZABBIX_URL: http://zabbix_web:8080/api_jsonrpc.php
+      ZABBIX_USER: Admin
+      ZABBIX_PASSWORD: zabbix
+      SEED_ON_BOOT: "true"
+      SEED_ADMIN_EMAIL: admin@ztc.ma
+      SEED_ADMIN_PASSWORD: password123
+    ports:
+      - "4000:4000"
+    networks: [maas_net]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      zabbix_web:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        # Browser calls the API via the published host port
+        NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+    container_name: maas-frontend
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "3000:3000"
+    networks: [maas_net]
+    depends_on:
+      - backend

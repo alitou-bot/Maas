@@ -1,0 +1,181 @@
+
+
+networks:
+  maas_net:
+    driver: bridge
+
+volumes:
+  maas_pg_data:
+    name: maas_pg_data
+  zabbix_pg_data:
+    name: zabbix_pg_data
+  maas_host_ip:
+    name: maas_host_ip
+  maas_reports:
+    name: maas_reports
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: maas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: maas
+      POSTGRES_PASSWORD: maas
+      POSTGRES_DB: maas
+    ports:
+      - "5434:5432"
+    volumes:
+      - maas_pg_data:/var/lib/postgresql/data
+    networks: [maas_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maas -d maas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres_zabbix:
+    image: postgres:16-alpine
+    container_name: maas-zabbix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix
+      POSTGRES_DB: zabbix
+    volumes:
+      - zabbix_pg_data:/var/lib/postgresql/data
+    networks: [maas_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zabbix -d zabbix"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  zabbix_server:
+    image: zabbix/zabbix-server-pgsql:alpine-6.4-latest
+    container_name: maas-zabbix-server
+    restart: unless-stopped
+    environment:
+      DB_SERVER_HOST: postgres_zabbix
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix
+      ZBX_STARTPOLLERS: 5
+      # More discoverers so /24 LAN sweeps finish instead of stalling on one worker
+      ZBX_STARTDISCOVERERS: 5
+      ZBX_CACHESIZE: 32M
+    # fping (ICMP discovery) needs raw sockets inside the container
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    ports:
+      - "10051:10051"
+    networks: [maas_net]
+    depends_on:
+      postgres_zabbix:
+        condition: service_healthy
+
+  zabbix_web:
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-6.4-latest
+    container_name: maas-zabbix-web
+    restart: unless-stopped
+    environment:
+      DB_SERVER_HOST: postgres_zabbix
+      POSTGRES_DB: zabbix
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix
+      ZBX_SERVER_HOST: zabbix_server
+      PHP_TZ: Africa/Tunis
+    ports:
+      - "8080:8080"
+    networks: [maas_net]
+    depends_on:
+      postgres_zabbix:
+        condition: service_healthy
+      zabbix_server:
+        condition: service_started
+
+  # Publishes the host LAN IP so backend install scripts stay current after DHCP changes
+  host_ip:
+    image: alpine:3.20
+    container_name: maas-host-ip
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - maas_host_ip:/run/maas
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /run/maas
+        while true; do
+          ip -4 route get 1.1.1.1 2>/dev/null \
+            | awk '{for (i = 1; i <= NF; i++) if ($$i == "src") { print $$(i + 1); exit }}' \
+            > /run/maas/host-ip.tmp && mv /run/maas/host-ip.tmp /run/maas/host-ip
+          sleep 30
+        done
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: maas-backend
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: maas
+      DB_PASSWORD: maas
+      DB_NAME: maas
+      JWT_SECRET: maas-dev-secret-change-me
+      JWT_REFRESH_SECRET: maas-refresh-secret-change-me
+      JWT_ACCESS_EXPIRES: 8h
+      JWT_REFRESH_EXPIRES: 7d
+      WEBHOOK_SECRET: zabbix-webhook-secret
+      FRONTEND_URL: http://localhost:3000
+      REPORTS_DIR: reports
+      ZABBIX_MOCK: "false"
+      ZABBIX_URL: http://zabbix_web:8080/api_jsonrpc.php
+      ZABBIX_USER: Admin
+      ZABBIX_PASSWORD: zabbix
+      BACKEND_PUBLIC_URL: http://backend:4000/api/v1
+      # Leave unset — resolved per request / host_ip sidecar (see resolvePublicEndpoints)
+      MAAS_HOST_IP_FILE: /run/maas/host-ip
+      SEED_ON_BOOT: "true"
+      SEED_ADMIN_EMAIL: admin@ztc.ma
+      SEED_ADMIN_PASSWORD: password123
+    ports:
+      - "4000:4000"
+    volumes:
+      - maas_host_ip:/run/maas:ro
+      - maas_reports:/app/reports
+    networks: [maas_net]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      zabbix_web:
+        condition: service_started
+      host_ip:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Fallback only — browser uses window.location.hostname at runtime
+        NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+    container_name: maas-frontend
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      # http://localhost is not HTTPS — Secure cookies would break login
+      COOKIE_SECURE: "false"
+    ports:
+      - "3000:3000"
+    networks: [maas_net]
+    depends_on:
+      - backend

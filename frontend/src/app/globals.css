@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant light (&:where(.light, .light *));
+
+@theme inline {
+  --font-sans: var(--font-plus-jakarta);
+
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-muted: var(--accent-muted);
+  --color-status-up: var(--status-up);
+  --color-status-down: var(--status-down);
+  --color-status-warn: var(--status-warn);
+  --color-status-unknown: var(--status-unknown);
+  --color-severity-critical: var(--severity-critical);
+  --color-severity-warning: var(--severity-warning);
+  --color-severity-info: var(--severity-info);
+  --color-role-admin: var(--role-admin);
+  --color-role-noc: var(--role-noc);
+  --color-role-tenant: var(--role-tenant);
+  --color-role-viewer: var(--role-viewer);
+  --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
+}
+
+:root,
+.dark {
+  --surface-base: #020617;
+  --surface-raised: #0f172a;
+  --surface-overlay: #1e293b;
+  --border-subtle: #1e293b;
+  --border-strong: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --accent: #22c55e;
+  --accent-fg: #052e16;
+  --accent-muted: rgba(34, 197, 94, 0.15);
+  --status-up: #22c55e;
+  --status-down: #ef4444;
+  --status-warn: #f59e0b;
+  --status-unknown: #64748b;
+  --severity-critical: #ef4444;
+  --severity-warning: #f59e0b;
+  --severity-info: #3b82f6;
+  --role-admin: #a855f7;
+  --role-noc: #3b82f6;
+  --role-tenant: #14b8a6;
+  --role-viewer: #64748b;
+  --danger: #ef4444;
+  --danger-fg: #ffffff;
+}
+
+.light {
+  --surface-base: #f1f5f9;
+  --surface-raised: #ffffff;
+  --surface-overlay: #f8fafc;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --accent: #16a34a;
+  --accent-fg: #ffffff;
+  --accent-muted: rgba(22, 163, 74, 0.12);
+  --status-up: #16a34a;
+  --status-down: #dc2626;
+  --status-warn: #d97706;
+  --status-unknown: #64748b;
+  --severity-critical: #dc2626;
+  --severity-warning: #d97706;
+  --severity-info: #2563eb;
+  --role-admin: #9333ea;
+  --role-noc: #2563eb;
+  --role-tenant: #0d9488;
+  --role-viewer: #64748b;
+  --danger: #dc2626;
+  --danger-fg: #ffffff;
+}
+
+* {
+  border-color: var(--border-subtle);
+}
+
+html {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
+}
+
+body {
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font-family: var(--font-plus-jakarta), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.35);
+  }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}

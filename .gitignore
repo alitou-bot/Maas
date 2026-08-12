@@ -1,0 +1,34 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# next.js
+.next/
+out/
+
+# nest / build
+dist/
+build/
+coverage/
+
+# env
+.env
+.env*.local
+
+# misc
+.DS_Store
+*.pem
+*.log
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+
+# backend reports
+backend/reports/*
+!backend/reports/.gitkeep
