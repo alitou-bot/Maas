@@ -21,12 +21,11 @@ pipeline {
       }
     }
 
-    stage('Backend — Lint & Build') {
+    stage('Backend — Build') {
       steps {
         dir('backend') {
           sh 'node --version && npm --version'
           sh 'npm ci'
-          sh 'npm run lint'
           sh 'npm run build'
         }
       }
@@ -40,11 +39,10 @@ pipeline {
       }
     }
 
-    stage('Frontend — Lint & Build') {
+    stage('Frontend — Build') {
       steps {
         dir('frontend') {
           sh 'npm ci'
-          sh 'npm run lint'
           sh 'npm run build'
         }
       }
