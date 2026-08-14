@@ -21,6 +21,7 @@ services:
       - ./kubeconfig:/var/jenkins_home/kubeconfig:ro
       - ${MINIKUBE_HOME:-/home/vboxuser/.minikube}:/minikube:ro
       - ${GITHUB_SSH_KEY:-/home/vboxuser/.ssh/id_ed25519}:/run/secrets/github_ssh_key:ro
+      - ${GITHUB_KNOWN_HOSTS:-/home/vboxuser/.ssh/known_hosts}:/var/jenkins_home/.ssh/known_hosts:ro
     networks:
       - minikube
 
