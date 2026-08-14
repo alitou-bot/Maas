@@ -1,0 +1,38 @@
+jenkins:
+  systemMessage: "MAAS CI/CD — build, test, and deploy to Minikube"
+  numExecutors: 2
+
+unclassified:
+  location:
+    url: "http://localhost:8081/"
+
+jobs:
+  - script: >
+      pipelineJob('maas-ci-cd') {
+        description('Build, test, push Docker images, and deploy MAAS to Kubernetes on push to main.')
+        properties {
+          pipelineTriggers {
+            triggers {
+              githubPush()
+              pollSCM {
+                scmpoll_spec('H/2 * * * *')
+              }
+            }
+          }
+        }
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('git@github.com:alitou-bot/Maas.git')
+                  credentials('github-ssh-key')
+                }
+                branch('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }

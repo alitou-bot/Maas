@@ -1,0 +1,32 @@
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DOCKER_GID: ${DOCKER_GID:-115}
+    container_name: maas-jenkins
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+      - "50000:50000"
+    environment:
+      DOCKERHUB_USER: ${DOCKERHUB_USER:-alansibi}
+      DOCKERHUB_PASS: ${DOCKERHUB_PASS:-}
+      KUBECONFIG: /var/jenkins_home/kubeconfig
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./kubeconfig:/var/jenkins_home/kubeconfig:ro
+      - ${MINIKUBE_HOME:-/home/vboxuser/.minikube}:/minikube:ro
+      - ${GITHUB_SSH_KEY:-/home/vboxuser/.ssh/id_ed25519}:/run/secrets/github_ssh_key:ro
+    networks:
+      - minikube
+
+networks:
+  minikube:
+    external: true
+
+volumes:
+  jenkins_home:

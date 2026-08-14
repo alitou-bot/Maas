@@ -1,0 +1,12 @@
+configuration-as-code
+git
+github
+github-branch-source
+workflow-aggregator
+pipeline-stage-view
+docker-workflow
+credentials-binding
+job-dsl
+ssh-credentials
+plain-credentials
+credentials
