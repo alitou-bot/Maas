@@ -8,7 +8,7 @@ pipeline {
     IMAGE_TAG = "${env.BUILD_NUMBER}"
     KUBECONFIG = "${env.HOME}/.kube/config"
     PATH = "/usr/local/bin:${env.HOME}/.local/bin:${env.PATH}"
-    DOCKER_BUILDKIT = '1'
+    DOCKER_BUILDKIT = '0'
   }
 
   options {
