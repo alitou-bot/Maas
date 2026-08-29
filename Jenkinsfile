@@ -60,39 +60,6 @@ pipeline {
       }
     }
 
-    stage('Docker — Push (optional)') {
-      when {
-        expression {
-          try {
-            withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'U', passwordVariable: 'P')]) {
-              return true
-            }
-          } catch (ignored) {
-            return false
-          }
-        }
-      }
-      steps {
-        withCredentials([
-          usernamePassword(
-            credentialsId: 'dockerhub-credentials',
-            usernameVariable: 'DOCKER_USER',
-            passwordVariable: 'DOCKER_PASS'
-          )
-        ]) {
-          sh '''
-            set -e
-            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-            docker push "${BACKEND_IMAGE}:${IMAGE_TAG}"
-            docker push "${BACKEND_IMAGE}:latest"
-            docker push "${FRONTEND_IMAGE}:${IMAGE_TAG}"
-            docker push "${FRONTEND_IMAGE}:latest"
-            docker logout || true
-          '''
-        }
-      }
-    }
-
     stage('Deploy — Kubernetes') {
       steps {
         sh '''
