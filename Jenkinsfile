@@ -95,11 +95,12 @@ pipeline {
 
           minikube image load "${BACKEND_IMAGE}:${IMAGE_TAG}"
           minikube image load "${FRONTEND_IMAGE}:${IMAGE_TAG}"
+          minikube image load postgres:16-alpine || true
 
           kubectl apply -f k8s/secret.yaml -f k8s/postgres.yaml -f k8s/backend.yaml -f k8s/frontend.yaml -f k8s/hpa.yaml
           kubectl set image deployment/maas-backend backend="${BACKEND_IMAGE}:${IMAGE_TAG}"
           kubectl set image deployment/maas-frontend frontend="${FRONTEND_IMAGE}:${IMAGE_TAG}"
-          kubectl wait --for=condition=available deployment/maas-postgres --timeout=180s
+          kubectl wait --for=condition=available deployment/maas-postgres --timeout=300s
           kubectl rollout status deployment/maas-backend --timeout=300s
           kubectl rollout status deployment/maas-frontend --timeout=300s
           kubectl get pods -l 'app in (maas-backend,maas-frontend,maas-postgres)'
