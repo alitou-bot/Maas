@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maas-frontend
+  labels:
+    app: maas-frontend
+    app.kubernetes.io/part-of: maas
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: maas-frontend
+  template:
+    metadata:
+      labels:
+        app: maas-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: alansibi/maas-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          env:
+            - name: PORT
+              value: "3000"
+            - name: HOSTNAME
+              value: 0.0.0.0
+            - name: COOKIE_SECURE
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: maas-frontend
+  labels:
+    app: maas-frontend
+    app.kubernetes.io/part-of: maas
+spec:
+  type: LoadBalancer
+  selector:
+    app: maas-frontend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000

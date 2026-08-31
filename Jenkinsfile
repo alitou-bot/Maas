@@ -6,8 +6,9 @@ pipeline {
     BACKEND_IMAGE = "${DOCKER_REGISTRY}/maas-backend"
     FRONTEND_IMAGE = "${DOCKER_REGISTRY}/maas-frontend"
     IMAGE_TAG = "${env.BUILD_NUMBER}"
-    KUBECONFIG = "${env.HOME}/.kube/config"
-    PATH = "/usr/local/bin:${env.HOME}/.local/bin:${env.PATH}"
+    MINIKUBE_HOME = '/home/vboxuser/.minikube'
+    KUBECONFIG = '/home/vboxuser/.kube/config'
+    PATH = "/usr/local/bin:/home/vboxuser/.local/bin:${env.PATH}"
     DOCKER_BUILDKIT = '0'
   }
 
@@ -18,12 +19,6 @@ pipeline {
   }
 
   stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
-    }
-
     stage('Backend — Test') {
       steps {
         dir('backend') {
@@ -86,18 +81,28 @@ pipeline {
       steps {
         sh '''
           set -e
+          export MINIKUBE_HOME=/home/vboxuser/.minikube
+          export KUBECONFIG=/home/vboxuser/.kube/config
+          export PATH="/usr/local/bin:/home/vboxuser/.local/bin:$PATH"
+
           if ! minikube status 2>/dev/null | grep -q "host: Running"; then
-            minikube start --cpus=2 --memory=3072 --driver=docker
+            minikube start --cpus=2 --memory=3072 --driver=docker \
+              --base-image=docker.io/kicbase/stable:v0.0.50 \
+              --wait=apiserver
           fi
+
+          kubectl cluster-info
+
           minikube image load "${BACKEND_IMAGE}:${IMAGE_TAG}"
           minikube image load "${FRONTEND_IMAGE}:${IMAGE_TAG}"
-          kubectl set image deployment/maas-backend \
-            backend="${BACKEND_IMAGE}:${IMAGE_TAG}"
-          kubectl set image deployment/maas-frontend \
-            frontend="${FRONTEND_IMAGE}:${IMAGE_TAG}"
+
+          kubectl apply -f k8s/secret.yaml -f k8s/postgres.yaml -f k8s/backend.yaml -f k8s/frontend.yaml -f k8s/hpa.yaml
+          kubectl set image deployment/maas-backend backend="${BACKEND_IMAGE}:${IMAGE_TAG}"
+          kubectl set image deployment/maas-frontend frontend="${FRONTEND_IMAGE}:${IMAGE_TAG}"
+          kubectl wait --for=condition=available deployment/maas-postgres --timeout=180s
           kubectl rollout status deployment/maas-backend --timeout=300s
           kubectl rollout status deployment/maas-frontend --timeout=300s
-          kubectl get pods -l 'app in (maas-backend,maas-frontend)'
+          kubectl get pods -l 'app in (maas-backend,maas-frontend,maas-postgres)'
         '''
       }
     }

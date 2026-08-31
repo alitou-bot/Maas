@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maas-backend
+  labels:
+    app: maas-backend
+    app.kubernetes.io/part-of: maas
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: maas-backend
+  template:
+    metadata:
+      labels:
+        app: maas-backend
+    spec:
+      containers:
+        - name: backend
+          image: alansibi/maas-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          env:
+            - name: PORT
+              value: "4000"
+            - name: NODE_ENV
+              value: development
+            - name: DB_HOST
+              value: maas-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: maas-secrets
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: maas-secrets
+                  key: POSTGRES_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: maas-secrets
+                  key: POSTGRES_DB
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: maas-secrets
+                  key: JWT_SECRET
+            - name: JWT_REFRESH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: maas-secrets
+                  key: JWT_REFRESH_SECRET
+            - name: JWT_ACCESS_EXPIRES
+              value: 8h
+            - name: JWT_REFRESH_EXPIRES
+              value: 7d
+            - name: WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: maas-secrets
+                  key: WEBHOOK_SECRET
+            - name: FRONTEND_URL
+              value: http://localhost:3000
+            - name: REPORTS_DIR
+              value: reports
+            - name: ZABBIX_MOCK
+              value: "false"
+            - name: ZABBIX_URL
+              value: http://zabbix-web:8080/api_jsonrpc.php
+            - name: ZABBIX_USER
+              valueFrom:
+                secretKeyRef:
+                  name: maas-secrets
+                  key: ZABBIX_USER
+            - name: ZABBIX_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: maas-secrets
+                  key: ZABBIX_PASSWORD
+            - name: BACKEND_PUBLIC_URL
+              value: http://localhost:4000/api/v1
+            - name: SEED_ON_BOOT
+              value: "true"
+            - name: SEED_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: maas-secrets
+                  key: SEED_ADMIN_EMAIL
+            - name: SEED_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: maas-secrets
+                  key: SEED_ADMIN_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /api/v1/system/health
+              port: 4000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/system/health
+              port: 4000
+            initialDelaySeconds: 40
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: maas-backend
+  labels:
+    app: maas-backend
+    app.kubernetes.io/part-of: maas
+spec:
+  type: LoadBalancer
+  selector:
+    app: maas-backend
+  ports:
+    - name: http
+      port: 4000
+      targetPort: 4000
