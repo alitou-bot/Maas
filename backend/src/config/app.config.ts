@@ -10,6 +10,11 @@ export default registerAs('app', () => ({
     process.env.JWT_REFRESH_SECRET || 'maas-refresh-secret-change-me',
   webhookSecret: process.env.WEBHOOK_SECRET || 'zabbix-webhook-secret',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  corsAllowAll: (process.env.CORS_ORIGINS || '').trim() === '*',
+  corsOrigins: (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:3000')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   reportsDir: process.env.REPORTS_DIR || 'reports',
   zabbix: {
     url: process.env.ZABBIX_URL || '',

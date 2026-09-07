@@ -40,8 +40,6 @@ import type {
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader, StatCard } from "@/components/ui/StatCard";
 import { PlanBadge, RoleBadge, StatusBadge } from "@/components/ui/Badge";
-import { AddServerDrawer, type InstallScriptReady } from "@/components/servers/AddServerDrawer";
-import { InstallScriptModal } from "@/components/servers/InstallScriptModal";
 import { EditServerDrawer } from "@/components/servers/EditServerDrawer";
 import { Button } from "@/components/ui/Button";
 import { Modal, ConfirmDialog } from "@/components/ui/Modal";
@@ -98,8 +96,6 @@ export default function TenantDetailPage() {
   const { data: plans } = useSWR<Plan[]>("/plans");
 
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [addServerOpen, setAddServerOpen] = useState(false);
-  const [installModal, setInstallModal] = useState<InstallScriptReady | null>(null);
   const [editServer, setEditServer] = useState<Server | null>(null);
   const [deleteServer, setDeleteServer] = useState<Server | null>(null);
   const [deletingServer, setDeletingServer] = useState(false);
@@ -561,12 +557,6 @@ export default function TenantDetailPage() {
 
       {activeTab === "servers" && (
         <>
-          <div className="mb-4 flex justify-end">
-            <Button onClick={() => setAddServerOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Add server
-            </Button>
-          </div>
           {isInitialLoad(serversLoading, serversPage) ? (
             <TableSkeleton rows={5} />
           ) : (
@@ -575,29 +565,6 @@ export default function TenantDetailPage() {
               columns={serverColumns}
               searchPlaceholder="Search servers…"
               emptyTitle="No servers for this tenant"
-            />
-          )}
-          <AddServerDrawer
-            open={addServerOpen}
-            onClose={() => setAddServerOpen(false)}
-            defaultTenantId={tenantId}
-            onScriptReady={(result) => {
-              setAddServerOpen(false);
-              setInstallModal(result);
-            }}
-          />
-          {installModal && (
-            <InstallScriptModal
-              serverId={installModal.serverId}
-              installCommand={installModal.installCommand}
-              installToken={installModal.installToken}
-              os={installModal.os}
-              onClose={() => setInstallModal(null)}
-              onConnected={() => {
-                void mutateServers();
-                void mutateTenant();
-              }}
-              serverDetailBase="/noc/servers"
             />
           )}
           <EditServerDrawer

@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/Input";
 import { TableSkeleton } from "@/components/ui/EmptyState";
 import { swrFetcher } from "@/lib/api";
 import { TAB_REFRESH } from "@/lib/live";
+import { canUseWatch } from "@/lib/watch";
 import { WatchButton } from "@/components/watch/WatchButton";
+import { useAuth } from "@/providers/AuthProvider";
 import type { ServerProcess, ServerProcessesResponse } from "@/types";
 
 function formatBytes(value: number) {
@@ -24,6 +26,8 @@ function formatBytes(value: number) {
 }
 
 export function ProcessesTab({ serverId }: { serverId: string }) {
+  const { user } = useAuth();
+  const showWatch = canUseWatch(user?.role);
   const [search, setSearch] = useState("");
   const { data, isLoading } = useSWR<ServerProcessesResponse>(
     `/servers/${serverId}/processes`,
@@ -40,17 +44,21 @@ export function ProcessesTab({ serverId }: { serverId: string }) {
 
   const columns = useMemo<ColumnDef<ServerProcess, unknown>[]>(
     () => [
-      {
-        id: "watch",
-        header: "",
-        cell: ({ row }) => (
-          <WatchButton
-            serverId={serverId}
-            entityType="PROCESS"
-            entityName={row.original.name}
-          />
-        ),
-      },
+      ...(showWatch
+        ? [
+            {
+              id: "watch",
+              header: "",
+              cell: ({ row }: { row: { original: ServerProcess } }) => (
+                <WatchButton
+                  serverId={serverId}
+                  entityType="PROCESS"
+                  entityName={row.original.name}
+                />
+              ),
+            },
+          ]
+        : []),
       { accessorKey: "name", header: "Process name" },
       {
         accessorKey: "instances",
@@ -86,7 +94,7 @@ export function ProcessesTab({ serverId }: { serverId: string }) {
         },
       },
     ],
-    [serverId]
+    [serverId, showWatch]
   );
 
   return (

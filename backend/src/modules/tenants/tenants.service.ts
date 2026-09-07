@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository } from 'typeorm';
 import { paginate } from '../../common/dto/pagination.dto';
-import { IncidentStatus } from '../../common/enums';
+import { IncidentStatus, TenantStatus } from '../../common/enums';
 import { Incident } from '../../entities/incident.entity';
 import { Plan } from '../../entities/plan.entity';
 import { Server } from '../../entities/server.entity';
@@ -199,6 +199,11 @@ export class TenantsService {
 
     tenant.status = dto.status;
     await this.tenantsRepo.save(tenant);
+
+    if (dto.status === TenantStatus.SUSPENDED) {
+      await this.usersRepo.update({ tenantId }, { refreshTokenHash: null });
+    }
+
     return this.toDetail(tenant);
   }
 

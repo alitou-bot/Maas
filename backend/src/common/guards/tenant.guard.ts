@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY, SKIP_TENANT_KEY } from '../decorators';
 import { UserRole } from '../enums';
+import { isAccountActive } from '../utils/account-access';
 import { User } from '../../entities/user.entity';
 
 /**
@@ -52,6 +53,10 @@ export class TenantGuard implements CanActivate {
 
     if (!user.tenantId) {
       throw new ForbiddenException('User has no tenant association');
+    }
+
+    if (!isAccountActive(user)) {
+      throw new ForbiddenException('Organization suspended');
     }
 
     request.tenantFilterId = user.tenantId;

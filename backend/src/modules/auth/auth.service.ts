@@ -12,7 +12,7 @@ import { randomBytes } from 'crypto';
 import { Repository } from 'typeorm';
 import { User } from '../../entities/user.entity';
 import { PasswordResetToken } from '../../entities/password-reset-token.entity';
-import { UserStatus } from '../../common/enums';
+import { assertAccountActive } from '../../common/utils/account-access';
 import {
   ForgotPasswordDto,
   LoginDto,
@@ -71,6 +71,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.usersRepo.findOne({
       where: { email: dto.email.toLowerCase() },
+      relations: { tenant: true },
     });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -79,9 +80,7 @@ export class AuthService {
     if (!ok) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    if (user.status === UserStatus.SUSPENDED) {
-      throw new ForbiddenException('Account suspended');
-    }
+    assertAccountActive(user);
     user.lastLogin = new Date();
     await this.usersRepo.save(user);
     const tokens = await this.signTokens(user);
@@ -97,7 +96,10 @@ export class AuthService {
       if (payload.type !== 'refresh') {
         throw new UnauthorizedException('Invalid refresh token');
       }
-      const user = await this.usersRepo.findOne({ where: { id: payload.sub } });
+      const user = await this.usersRepo.findOne({
+        where: { id: payload.sub },
+        relations: { tenant: true },
+      });
       if (!user?.refreshTokenHash) {
         throw new UnauthorizedException('Invalid refresh token');
       }
@@ -108,9 +110,7 @@ export class AuthService {
       if (!match) {
         throw new UnauthorizedException('Invalid refresh token');
       }
-      if (user.status === UserStatus.SUSPENDED) {
-        throw new ForbiddenException('Account suspended');
-      }
+      assertAccountActive(user);
       const tokens = await this.signTokens(user);
       return { ...tokens, user: this.toUserDto(user) };
     } catch (e) {
@@ -135,6 +135,7 @@ export class AuthService {
       relations: { tenant: true },
     });
     const u = fresh ?? user;
+    assertAccountActive(u);
     return {
       ...this.toUserDto(u),
       tenantName: u.tenant?.name ?? null,

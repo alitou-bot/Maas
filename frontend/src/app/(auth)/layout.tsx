@@ -18,13 +18,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           backgroundSize: "48px 48px",
         }}
       />
-      <div className="relative z-10 mb-8 flex flex-col items-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-accent-fg text-2xl font-bold shadow-lg shadow-accent/20">
-          Z
-        </div>
-        <p className="mt-3 text-lg font-bold tracking-tight text-text-primary">ZTC</p>
-        <p className="text-xs text-text-muted">MAAS Dashboard Pro</p>
-      </div>
       <div className="relative z-10 w-full max-w-md">{children}</div>
       <p className="relative z-10 mt-8 text-xs text-text-muted">
         Need help?{" "}

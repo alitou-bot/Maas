@@ -9,10 +9,14 @@ import { TableSkeleton } from "@/components/ui/EmptyState";
 import { swrFetcher } from "@/lib/api";
 import { TAB_REFRESH } from "@/lib/live";
 import { timeAgo } from "@/lib/utils";
+import { canUseWatch } from "@/lib/watch";
 import { WatchButton } from "@/components/watch/WatchButton";
+import { useAuth } from "@/providers/AuthProvider";
 import type { ServerService, ServerServicesResponse } from "@/types";
 
 export function ServicesTab({ serverId }: { serverId: string }) {
+  const { user } = useAuth();
+  const showWatch = canUseWatch(user?.role);
   const { data, isLoading } = useSWR<ServerServicesResponse>(
     `/servers/${serverId}/services`,
     swrFetcher,
@@ -23,18 +27,22 @@ export function ServicesTab({ serverId }: { serverId: string }) {
 
   const columns = useMemo<ColumnDef<ServerService, unknown>[]>(
     () => [
-      {
-        id: "watch",
-        header: "",
-        cell: ({ row }) => (
-          <WatchButton
-            serverId={serverId}
-            entityType="SERVICE"
-            entityName={row.original.name}
-            entityMeta={{ port: row.original.port }}
-          />
-        ),
-      },
+      ...(showWatch
+        ? [
+            {
+              id: "watch",
+              header: "",
+              cell: ({ row }: { row: { original: ServerService } }) => (
+                <WatchButton
+                  serverId={serverId}
+                  entityType="SERVICE"
+                  entityName={row.original.name}
+                  entityMeta={{ port: row.original.port }}
+                />
+              ),
+            },
+          ]
+        : []),
       { accessorKey: "name", header: "Service name" },
       {
         accessorKey: "port",
@@ -80,7 +88,7 @@ export function ServicesTab({ serverId }: { serverId: string }) {
         },
       },
     ],
-    [serverId]
+    [serverId, showWatch]
   );
 
   if (isLoading && !data) return <TableSkeleton rows={6} />;

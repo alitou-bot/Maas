@@ -10,8 +10,12 @@ async function bootstrap() {
   const config = app.get(ConfigService);
 
   app.setGlobalPrefix('api/v1');
+  const corsAllowAll = config.get<boolean>('app.corsAllowAll') ?? false;
+  const corsOrigins =
+    config.get<string[]>('app.corsOrigins') ?? ['http://localhost:3000'];
   app.enableCors({
-    origin: config.get<string>('app.frontendUrl') || 'http://localhost:3000',
+    // credentials + wildcard (*) is invalid — reflect the request origin instead
+    origin: corsAllowAll ? true : corsOrigins,
     credentials: true,
   });
   app.useGlobalPipes(

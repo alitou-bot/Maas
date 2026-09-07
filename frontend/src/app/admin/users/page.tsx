@@ -16,6 +16,7 @@ import { Input, Select } from "@/components/ui/Input";
 import { TableSkeleton } from "@/components/ui/EmptyState";
 import { isInitialLoad } from "@/lib/live";
 import { timeAgo } from "@/lib/utils";
+import { useAuth } from "@/providers/AuthProvider";
 
 const ROLES: Role[] = [
   "SUPER_ADMIN",
@@ -27,6 +28,7 @@ const ROLES: Role[] = [
 const TENANT_ROLES: Role[] = ["TENANT_ADMIN", "CLIENT_VIEWER"];
 
 export default function AdminUsersPage() {
+  const { user: currentUser } = useAuth();
   const { data, isLoading, error: loadError, mutate } = useSWR<Paginated<User>>(
     "/users?limit=100"
   );
@@ -34,10 +36,12 @@ export default function AdminUsersPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<User | null>(null);
-  const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
+  const [statusTarget, setStatusTarget] = useState<User | null>(null);
+  const [resetTarget, setResetTarget] = useState<User | null>(null);
   const [createdCredentials, setCreatedCredentials] = useState<{
     email: string;
     temporaryPassword: string;
+    title?: string;
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -60,12 +64,24 @@ export default function AdminUsersPage() {
   const users = data?.data ?? [];
   const tenants = tenantsPage?.data ?? [];
 
-  async function resetPassword(user: User) {
+  async function confirmResetPassword() {
+    if (!resetTarget) return;
     setError("");
+    setSubmitting(true);
     try {
-      await api.post(`/users/${user.id}/reset-password`);
+      const { data } = await api.post<{ email: string; temporaryPassword: string }>(
+        `/users/${resetTarget.id}/reset-password`,
+      );
+      setCreatedCredentials({
+        email: data.email,
+        temporaryPassword: data.temporaryPassword,
+        title: "Password reset",
+      });
     } catch (err) {
       setError(apiErrorMessage(err, "Failed to reset password"));
+    } finally {
+      setSubmitting(false);
+      setResetTarget(null);
     }
   }
 
@@ -109,7 +125,10 @@ export default function AdminUsersPage() {
         id: "actions",
         header: "Actions",
         enableSorting: false,
-        cell: ({ row }) => (
+        cell: ({ row }) => {
+          const isSelf = row.original.id === currentUser?.id;
+          const isSuspended = row.original.status === "suspended";
+          return (
           <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
@@ -131,24 +150,26 @@ export default function AdminUsersPage() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => void resetPassword(row.original)}
+              onClick={() => setResetTarget(row.original)}
             >
               Reset password
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-status-down"
-              onClick={() => setDeactivateTarget(row.original)}
-            >
-              Deactivate
-            </Button>
+            {!isSelf && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className={isSuspended ? "text-accent" : "text-status-down"}
+                onClick={() => setStatusTarget(row.original)}
+              >
+                {isSuspended ? "Reactivate" : "Deactivate"}
+              </Button>
+            )}
           </div>
-        ),
+          );
+        },
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tenants]
+    [tenants, currentUser?.id]
   );
 
   async function submitUser(e: React.FormEvent) {
@@ -192,6 +213,7 @@ export default function AdminUsersPage() {
         setCreatedCredentials({
           email: created.email,
           temporaryPassword: created.temporaryPassword,
+          title: "User created",
         });
       }
     } catch (err) {
@@ -232,17 +254,20 @@ export default function AdminUsersPage() {
     }
   }
 
-  async function confirmDeactivate() {
-    if (!deactivateTarget) return;
+  async function confirmStatusChange() {
+    if (!statusTarget) return;
+    const nextStatus = statusTarget.status === "active" ? "suspended" : "active";
     try {
-      await api.patch(`/users/${deactivateTarget.id}`, { status: "suspended" });
+      await api.patch(`/users/${statusTarget.id}`, { status: nextStatus });
       await mutate();
     } catch (err) {
-      setError(apiErrorMessage(err, "Failed to deactivate user"));
+      setError(apiErrorMessage(err, `Failed to ${nextStatus === "suspended" ? "deactivate" : "reactivate"} user`));
     } finally {
-      setDeactivateTarget(null);
+      setStatusTarget(null);
     }
   }
+
+  const statusAction = statusTarget?.status === "suspended" ? "reactivate" : "deactivate";
 
   const showTenant = TENANT_ROLES.includes(form.role);
   const showEditTenant = TENANT_ROLES.includes(editForm.role);
@@ -395,7 +420,7 @@ export default function AdminUsersPage() {
       <Modal
         open={!!createdCredentials}
         onClose={() => setCreatedCredentials(null)}
-        title="User created"
+        title={createdCredentials?.title ?? "Credentials"}
         footer={
           <Button onClick={() => setCreatedCredentials(null)}>Done</Button>
         }
@@ -494,12 +519,31 @@ export default function AdminUsersPage() {
       </Modal>
 
       <ConfirmDialog
-        open={!!deactivateTarget}
-        onClose={() => setDeactivateTarget(null)}
-        title="Deactivate user"
-        description={`Deactivate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}? They will no longer be able to sign in.`}
-        confirmLabel="Deactivate"
-        onConfirm={() => void confirmDeactivate()}
+        open={!!resetTarget}
+        onClose={() => setResetTarget(null)}
+        title="Reset password"
+        description={
+          resetTarget
+            ? `Generate a new temporary password for ${resetTarget.firstName} ${resetTarget.lastName}? Their current sessions will be signed out.`
+            : ""
+        }
+        confirmLabel="Reset password"
+        onConfirm={() => void confirmResetPassword()}
+      />
+
+      <ConfirmDialog
+        open={!!statusTarget}
+        onClose={() => setStatusTarget(null)}
+        title={statusAction === "reactivate" ? "Reactivate user" : "Deactivate user"}
+        description={
+          statusTarget
+            ? statusAction === "reactivate"
+              ? `Reactivate ${statusTarget.firstName} ${statusTarget.lastName}? They will be able to sign in again.`
+              : `Deactivate ${statusTarget.firstName} ${statusTarget.lastName}? They will no longer be able to sign in.`
+            : ""
+        }
+        confirmLabel={statusAction === "reactivate" ? "Reactivate" : "Deactivate"}
+        onConfirm={() => void confirmStatusChange()}
       />
     </div>
   );

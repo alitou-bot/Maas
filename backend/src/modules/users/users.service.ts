@@ -235,7 +235,12 @@ export class UsersService {
     if (dto.firstName !== undefined) user.firstName = dto.firstName;
     if (dto.lastName !== undefined) user.lastName = dto.lastName;
     if (dto.role !== undefined) user.role = dto.role;
-    if (dto.status !== undefined) user.status = dto.status;
+    if (dto.status !== undefined) {
+      user.status = dto.status;
+      if (dto.status === UserStatus.SUSPENDED) {
+        user.refreshTokenHash = null;
+      }
+    }
     if (dto.password !== undefined) {
       user.passwordHash = await bcrypt.hash(dto.password, 10);
     }
@@ -298,22 +303,23 @@ export class UsersService {
 
     if (actor.role === UserRole.TENANT_ADMIN) {
       this.assertTenantAdminOwnsTarget(actor, user);
+    } else if (actor.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Insufficient role privileges');
     }
 
-    const token = randomBytes(32).toString('hex');
-    await this.resetRepo.save(
-      this.resetRepo.create({
-        userId: user.id,
-        token,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-        usedAt: null,
-      }),
+    const temporaryPassword = this.generateTempPassword();
+    user.passwordHash = await bcrypt.hash(temporaryPassword, 10);
+    user.refreshTokenHash = null;
+    await this.usersRepo.save(user);
+
+    console.log(
+      `[dev] Reset password for ${user.email} — temp password: ${temporaryPassword}`,
     );
 
-    if (this.config.get('app.nodeEnv') !== 'production') {
-      console.log(`[dev] Password reset token for ${user.email}: ${token}`);
-    }
-
-    return { message: 'Reset email sent' };
+    return {
+      message: 'Password reset',
+      email: user.email,
+      temporaryPassword,
+    };
   }
 }

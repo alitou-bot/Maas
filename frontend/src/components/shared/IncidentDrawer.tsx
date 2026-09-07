@@ -1,22 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import useSWR from "swr";
-import type { Incident, MetricSeries } from "@/types";
+import type { Incident } from "@/types";
 import { SeverityBadge, StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { durationBetween, formatDateTime } from "@/lib/utils";
-import { swrFetcher } from "@/lib/api";
-import { LIVE_SWR } from "@/lib/live";
-import {
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 export function IncidentDrawer({
   incident,
@@ -38,25 +27,12 @@ export function IncidentDrawer({
   onAddNote?: (note: string) => void;
 }) {
   const [note, setNote] = useState("");
-  const metricsKey = useMemo(() => {
-    if (!open || !incident?.serverId) return null;
-    const to = new Date().toISOString();
-    const from = new Date(Date.now() - 6 * 3600000).toISOString();
-    return `/servers/${incident.serverId}/metrics?metric=cpu&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
-  }, [open, incident?.serverId]);
-  const { data: metrics } = useSWR<MetricSeries>(metricsKey, swrFetcher, LIVE_SWR);
 
   useEffect(() => {
     if (!open) setNote("");
   }, [open, incident?.id]);
 
   if (!open || !incident) return null;
-
-  const chart =
-    metrics?.dataPoints?.map((p) => ({
-      time: p.timestamp,
-      value: p.value,
-    })) || [];
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -133,41 +109,6 @@ export function IncidentDrawer({
                 </p>
               </li>
             </ol>
-          </section>
-
-          <section>
-            <h3 className="text-sm font-semibold text-text-primary mb-2">
-              Affected metrics
-            </h3>
-            <div className="h-36 rounded-lg border border-border-subtle bg-surface-base p-2">
-              {chart.length === 0 ? (
-                <p className="flex h-full items-center justify-center text-xs text-text-muted">
-                  No metric data
-                </p>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chart}>
-                    <XAxis dataKey="time" hide />
-                    <YAxis domain={[0, 100]} hide />
-                    <Tooltip
-                      contentStyle={{
-                        background: "var(--surface-raised)",
-                        border: "1px solid var(--border-subtle)",
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      stroke="var(--accent)"
-                      dot={false}
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
           </section>
 
           <section>

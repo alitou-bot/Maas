@@ -44,7 +44,7 @@ export class ServersController {
 
   @Post()
   @HttpCode(201)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.TENANT_ADMIN)
+  @Roles(UserRole.TENANT_ADMIN)
   create(@Body() dto: CreateServerDto, @Req() req: AuthedRequest) {
     return this.serversService.create(dto, req.user, req);
   }

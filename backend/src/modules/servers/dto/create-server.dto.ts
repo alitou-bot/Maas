@@ -1,7 +1,7 @@
 import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateServerDto {
-  /** Required for SUPER_ADMIN; ignored for TENANT_ADMIN (JWT tenantId wins). */
+  /** Ignored — tenant is taken from the authenticated TENANT_ADMIN JWT. */
   @IsOptional()
   @IsUUID()
   tenantId?: string;

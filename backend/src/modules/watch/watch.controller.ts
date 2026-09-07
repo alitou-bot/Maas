@@ -21,7 +21,6 @@ export class WatchController {
   @Post()
   @Roles(
     UserRole.SUPER_ADMIN,
-    UserRole.NOC_OPERATOR,
     UserRole.TENANT_ADMIN,
     UserRole.CLIENT_VIEWER,
   )
@@ -36,7 +35,6 @@ export class WatchController {
   @Delete(':id')
   @Roles(
     UserRole.SUPER_ADMIN,
-    UserRole.NOC_OPERATOR,
     UserRole.TENANT_ADMIN,
     UserRole.CLIENT_VIEWER,
   )
@@ -51,7 +49,6 @@ export class WatchController {
   @Get('list')
   @Roles(
     UserRole.SUPER_ADMIN,
-    UserRole.NOC_OPERATOR,
     UserRole.TENANT_ADMIN,
     UserRole.CLIENT_VIEWER,
   )
@@ -66,7 +63,6 @@ export class WatchController {
   @Get('keys/:serverId')
   @Roles(
     UserRole.SUPER_ADMIN,
-    UserRole.NOC_OPERATOR,
     UserRole.TENANT_ADMIN,
     UserRole.CLIENT_VIEWER,
   )

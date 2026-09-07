@@ -90,6 +90,12 @@ export function middleware(request: NextRequest) {
       url.pathname = "/client/dashboard";
       return NextResponse.redirect(url);
     }
+
+    if (user.role === "NOC_OPERATOR" && pathname.startsWith("/noc/watches")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/noc/dashboard";
+      return NextResponse.redirect(url);
+    }
   }
 
   return NextResponse.next();

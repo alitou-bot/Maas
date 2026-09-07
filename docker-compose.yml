@@ -116,6 +116,7 @@ services:
         done
 
   backend:
+    image: maas-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -135,6 +136,7 @@ services:
       JWT_REFRESH_EXPIRES: 7d
       WEBHOOK_SECRET: zabbix-webhook-secret
       FRONTEND_URL: http://localhost:3000
+      CORS_ORIGINS: "*"
       REPORTS_DIR: reports
       ZABBIX_MOCK: "false"
       ZABBIX_URL: http://zabbix_web:8080/api_jsonrpc.php
@@ -161,6 +163,7 @@ services:
         condition: service_started
 
   frontend:
+    image: maas-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile

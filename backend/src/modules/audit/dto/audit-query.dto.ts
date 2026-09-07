@@ -1,8 +1,20 @@
 import { Type } from 'class-transformer';
-import { IsOptional, IsString, IsUUID } from 'class-validator';
-import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
+import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 
-export class AuditQueryDto extends PaginationQueryDto {
+export class AuditQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  limit?: number = 20;
+
   @IsOptional()
   @IsUUID()
   actorId?: string;

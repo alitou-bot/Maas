@@ -9,6 +9,8 @@ import { StatCard } from "@/components/ui/StatCard";
 import { api, swrFetcher } from "@/lib/api";
 import { TAB_REFRESH } from "@/lib/live";
 import { timeAgo } from "@/lib/utils";
+import { canUseWatch } from "@/lib/watch";
+import { useAuth } from "@/providers/AuthProvider";
 import type { NetworkDevice, NetworkDeviceDetail, NetworkDevicesResponse } from "@/types";
 import { NetworkFilters } from "@/components/network/NetworkFilters";
 import { NetworkTable } from "@/components/network/NetworkTable";
@@ -81,6 +83,8 @@ function DeviceDetailPanel({
 }
 
 export function NetworkTab({ serverId }: { serverId: string }) {
+  const { user } = useAuth();
+  const showWatch = canUseWatch(user?.role);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
@@ -179,6 +183,7 @@ export function NetworkTab({ serverId }: { serverId: string }) {
       ) : (
         <ServerNetworkTable
           serverId={serverId}
+          showWatch={showWatch}
           devices={filtered}
           onSelect={(device) => setSelectedDeviceId(device.zabbixHostId)}
           onRunScan={devices.length === 0 ? () => void runScan() : undefined}
@@ -199,11 +204,13 @@ export function NetworkTab({ serverId }: { serverId: string }) {
 
 function ServerNetworkTable({
   serverId,
+  showWatch,
   devices,
   onSelect,
   onRunScan,
 }: {
   serverId: string;
+  showWatch: boolean;
   devices: NetworkDevice[];
   onSelect: (device: NetworkDevice) => void;
   onRunScan?: () => void;
@@ -214,7 +221,7 @@ function ServerNetworkTable({
       onRunScan={onRunScan}
       onSelectDevice={onSelect}
       hideGroup
-      watchServerId={serverId}
+      watchServerId={showWatch ? serverId : undefined}
     />
   );
 }

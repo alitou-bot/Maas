@@ -169,21 +169,13 @@ export class ServersService {
     installCommand: string;
     os: string;
   }> {
-    let resolvedTenantId: string;
-
-    if (currentUser.role === UserRole.TENANT_ADMIN) {
-      if (!currentUser.tenantId) {
-        throw new ForbiddenException('No tenant associated');
-      }
-      resolvedTenantId = currentUser.tenantId;
-    } else if (currentUser.role === UserRole.SUPER_ADMIN) {
-      if (!dto.tenantId) {
-        throw new BadRequestException('tenantId is required');
-      }
-      resolvedTenantId = dto.tenantId;
-    } else {
+    if (currentUser.role !== UserRole.TENANT_ADMIN) {
       throw new ForbiddenException('Insufficient permissions');
     }
+    if (!currentUser.tenantId) {
+      throw new ForbiddenException('No tenant associated');
+    }
+    const resolvedTenantId = currentUser.tenantId;
 
     const tenant = await this.tenantsRepo.findOne({
       where: { id: resolvedTenantId },

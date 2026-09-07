@@ -8,7 +8,9 @@ import { TableSkeleton } from "@/components/ui/EmptyState";
 import { swrFetcher } from "@/lib/api";
 import { TAB_REFRESH } from "@/lib/live";
 import { cn } from "@/lib/utils";
+import { canUseWatch } from "@/lib/watch";
 import { WatchButton } from "@/components/watch/WatchButton";
+import { useAuth } from "@/providers/AuthProvider";
 import type { ServerContainer, ServerContainersResponse } from "@/types";
 
 function formatBytes(value: number) {
@@ -34,6 +36,8 @@ function statusClass(status: string) {
 }
 
 export function ContainersTab({ serverId }: { serverId: string }) {
+  const { user } = useAuth();
+  const showWatch = canUseWatch(user?.role);
   const { data, isLoading } = useSWR<ServerContainersResponse>(
     `/servers/${serverId}/containers`,
     swrFetcher,
@@ -42,17 +46,21 @@ export function ContainersTab({ serverId }: { serverId: string }) {
 
   const columns = useMemo<ColumnDef<ServerContainer, unknown>[]>(
     () => [
-      {
-        id: "watch",
-        header: "",
-        cell: ({ row }) => (
-          <WatchButton
-            serverId={serverId}
-            entityType="CONTAINER"
-            entityName={row.original.name}
-          />
-        ),
-      },
+      ...(showWatch
+        ? [
+            {
+              id: "watch",
+              header: "",
+              cell: ({ row }: { row: { original: ServerContainer } }) => (
+                <WatchButton
+                  serverId={serverId}
+                  entityType="CONTAINER"
+                  entityName={row.original.name}
+                />
+              ),
+            },
+          ]
+        : []),
       { accessorKey: "name", header: "Container name" },
       {
         accessorKey: "image",
@@ -98,7 +106,7 @@ export function ContainersTab({ serverId }: { serverId: string }) {
         cell: ({ getValue }) => (getValue() as string) || "—",
       },
     ],
-    [serverId]
+    [serverId, showWatch]
   );
 
   if (isLoading && !data) return <TableSkeleton rows={5} />;

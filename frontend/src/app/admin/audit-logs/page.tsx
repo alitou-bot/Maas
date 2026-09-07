@@ -113,9 +113,7 @@ export default function AdminAuditLogsPage() {
         header: "Result",
         cell: ({ getValue }) => {
           const result = String(getValue());
-          const ok =
-            result.toLowerCase() === "success" ||
-            result.toLowerCase() === "ok";
+          const ok = ["success", "ok"].includes(result.toLowerCase());
           return (
             <StatusBadge status={ok ? "active" : "DOWN"} />
           );

@@ -28,6 +28,7 @@ import { useTheme } from "@/providers/ThemeProvider";
 import { cn, timeAgo } from "@/lib/utils";
 import type { NotificationInbox, Role } from "@/types";
 import { StatusDot } from "@/components/ui/Badge";
+import { Logo } from "@/components/layout/Logo";
 import useSWR, { mutate } from "swr";
 import { api, swrFetcher } from "@/lib/api";
 import { LIVE_SWR } from "@/lib/live";
@@ -56,7 +57,6 @@ export function nocNav(): NavItem[] {
     { href: "/noc/incidents", label: "Incidents", icon: ShieldAlert },
     { href: "/noc/servers", label: "Servers", icon: Server },
     { href: "/noc/alerts", label: "Alerts", icon: Activity },
-    { href: "/noc/watches", label: "My Watches", icon: Star },
     { href: "/noc/sla", label: "SLA reports", icon: FileBarChart },
   ];
 }
@@ -94,14 +94,8 @@ export function Sidebar({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   return (
     <aside className="hidden md:flex md:w-60 lg:w-64 shrink-0 flex-col border-r border-border-subtle bg-surface-raised">
-      <div className="flex h-14 items-center gap-2 border-b border-border-subtle px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-fg font-bold text-sm">
-          Z
-        </div>
-        <div>
-          <p className="text-sm font-bold text-text-primary leading-tight">MAAS</p>
-          <p className="text-[10px] uppercase tracking-wider text-text-muted">by ZTC</p>
-        </div>
+      <div className="flex h-14 items-center border-b border-border-subtle px-4">
+        <Logo size="md" showText />
       </div>
       <nav className="flex-1 space-y-0.5 p-3 overflow-y-auto">
         {items.map((item) => {
@@ -347,9 +341,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border-subtle bg-surface-raised/90 px-4 backdrop-blur">
       <div className="flex md:hidden items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-accent-fg text-xs font-bold">
-          Z
-        </div>
+        <Logo size="sm" />
         <span className="font-bold text-sm">MAAS</span>
       </div>
 

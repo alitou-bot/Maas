@@ -19,6 +19,10 @@ export const metadata: Metadata = {
     template: "%s | MAAS",
   },
   description: "MAAS Dashboard Pro — Monitoring as a Service by ZTC",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

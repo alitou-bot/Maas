@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Star } from "lucide-react";
 import useSWR from "swr";
 import { api, apiErrorMessage, swrFetcher } from "@/lib/api";
+import { canUseWatch } from "@/lib/watch";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/AuthProvider";
 import type { WatchedEntityType, WatchKey } from "@/types";
 
 type WatchButtonProps = {
@@ -42,12 +44,18 @@ export function WatchButton({
   entityMeta,
   compact = true,
 }: WatchButtonProps) {
+  const { user } = useAuth();
+  const canWatch = canUseWatch(user?.role);
   const [busy, setBusy] = useState(false);
   const { data: keys, mutate } = useSWR<WatchKey[]>(
-    `/watch/keys/${serverId}`,
+    canWatch ? `/watch/keys/${serverId}` : null,
     swrFetcher,
     { revalidateOnFocus: false },
   );
+
+  if (!canWatch) {
+    return null;
+  }
 
   const active = (keys ?? []).find((watch) =>
     matchesWatch(watch, entityType, entityName, entityMeta),

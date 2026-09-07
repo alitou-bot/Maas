@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
+import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -36,6 +37,12 @@ export default function LoginPage() {
 
   return (
     <div className="rounded-2xl border border-border-subtle bg-surface-raised/90 p-6 shadow-xl backdrop-blur sm:p-8">
+      <div className="mb-6 flex flex-col items-center text-center">
+        <Logo size="lg" />
+        <p className="mt-3 text-lg font-bold tracking-tight text-text-primary">ZTC</p>
+        <p className="text-xs text-text-muted">MAAS Dashboard Pro</p>
+      </div>
+
       <h1 className="text-xl font-bold text-text-primary">Sign in</h1>
       <p className="mt-1 text-sm text-text-muted">Access your monitoring workspace</p>
 

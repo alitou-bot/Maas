@@ -5,7 +5,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Repository } from 'typeorm';
 import { User } from '../../entities/user.entity';
-import { UserRole, UserStatus } from '../../common/enums';
+import { UserRole } from '../../common/enums';
+import { isAccountActive } from '../../common/utils/account-access';
 
 export interface JwtPayload {
   sub: string;
@@ -30,8 +31,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: JwtPayload): Promise<User> {
-    const user = await this.usersRepo.findOne({ where: { id: payload.sub } });
-    if (!user || user.status === UserStatus.SUSPENDED) {
+    const user = await this.usersRepo.findOne({
+      where: { id: payload.sub },
+      relations: { tenant: true },
+    });
+    if (!user || !isAccountActive(user)) {
       return null as unknown as User;
     }
     return user;
